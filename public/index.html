@@ -68,6 +68,12 @@
         gap: 15px;
       }
 
+      .login-form label {
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+      }
+
       .login-form input {
         padding: 12px;
         border: 1px solid #ddd;
@@ -546,9 +552,11 @@
         <h1>🔐 Access Restricted</h1>
         <p>Enter password to access the MongoDB CRUD Manager</p>
         <form class="login-form" onsubmit="handleLogin(event)">
+          <label for="passwordInput">Password</label>
           <input
             type="password"
             id="passwordInput"
+            name="password"
             placeholder="Enter password"
             required
             autofocus
@@ -1060,6 +1068,7 @@
           const group = document.createElement("div");
           group.className = "form-group";
 
+          const fieldId = `field-${key}-${Date.now()}`;
           const label = document.createElement("label");
           const sampleType = schemaFields[key]
             ? getFieldType(schemaFields[key])
@@ -1067,12 +1076,14 @@
           const isRequired = currentDocumentId ? "✎" : "✱";
           label.textContent = `${key} ${isRequired} (${sampleType})`;
           label.title = `Field type based on existing documents`;
-          label.setAttribute("data-field", key);
+          label.setAttribute("for", fieldId);
 
           const value = currentDocument[key];
           const isJSON = typeof value === "object" && value !== null;
 
           const input = document.createElement(isJSON ? "textarea" : "input");
+          input.id = fieldId;
+          input.name = key;
           input.value = isJSON ? JSON.stringify(value, null, 2) : value || "";
           input.setAttribute("data-field", key);
           input.setAttribute("data-type", isJSON ? "json" : "text");
@@ -1188,30 +1199,40 @@
       // Add field to form
       function addFieldToForm() {
         const modalBody = document.getElementById("modalBody");
+        const fieldGroupId = `field-group-${Date.now()}`;
 
         const group = document.createElement("div");
         group.className = "form-group";
+        group.id = fieldGroupId;
         group.style.border = "2px dashed #667eea";
         group.style.padding = "15px";
         group.style.borderRadius = "6px";
         group.style.backgroundColor = "#f9f9ff";
 
+        const nameFieldId = `${fieldGroupId}-name`;
         const label = document.createElement("label");
         label.textContent = "Field Name";
+        label.setAttribute("for", nameFieldId);
         label.style.fontWeight = "bold";
 
         const fieldNameInput = document.createElement("input");
+        fieldNameInput.id = nameFieldId;
+        fieldNameInput.name = `new-field-name-${Date.now()}`;
         fieldNameInput.placeholder = "e.g., email, age, status";
         fieldNameInput.className = "new-field-name";
         fieldNameInput.type = "text";
 
+        const typeFieldId = `${fieldGroupId}-type`;
         const typeLabel = document.createElement("label");
         typeLabel.textContent = "Field Type";
+        typeLabel.setAttribute("for", typeFieldId);
         typeLabel.style.fontWeight = "bold";
         typeLabel.style.marginTop = "10px";
         typeLabel.style.display = "block";
 
         const typeSelect = document.createElement("select");
+        typeSelect.id = typeFieldId;
+        typeSelect.name = `new-field-type-${Date.now()}`;
         typeSelect.className = "new-field-type";
         typeSelect.style.width = "100%";
         typeSelect.style.padding = "8px";
@@ -1226,13 +1247,17 @@
           <option value="date">Date</option>
         `;
 
+        const valueFieldId = `${fieldGroupId}-value`;
         const valueLabel = document.createElement("label");
         valueLabel.textContent = "Field Value";
+        valueLabel.setAttribute("for", valueFieldId);
         valueLabel.style.fontWeight = "bold";
         valueLabel.style.marginTop = "10px";
         valueLabel.style.display = "block";
 
         const valueInput = document.createElement("textarea");
+        valueInput.id = valueFieldId;
+        valueInput.name = `new-field-value-${Date.now()}`;
         valueInput.placeholder =
           'Enter value (use JSON format for objects/arrays, e.g., {"key": "value"})';
         valueInput.className = "new-field-value";
