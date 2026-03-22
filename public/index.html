@@ -1,0 +1,1447 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MongoDB CRUD Manager</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>📊</text></svg>"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      /* Login Screen */
+      .login-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+      }
+
+      .login-screen.hidden {
+        display: none;
+      }
+
+      .login-box {
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+      }
+
+      .login-box h1 {
+        font-size: 28px;
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      .login-box p {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+
+      .login-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .login-form input {
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .login-form input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .login-form button {
+        padding: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .login-form button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+      }
+
+      .login-form button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .login-error {
+        color: #ff6b6b;
+        font-size: 13px;
+        margin-top: -10px;
+        display: none;
+      }
+
+      .login-error.show {
+        display: block;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        position: relative;
+      }
+
+      header h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+      }
+
+      header p {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      .logout-btn {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .logout-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: none;
+        box-shadow: none;
+      }
+
+      .main-content {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        min-height: 600px;
+      }
+
+      .sidebar {
+        background: #f8f9fa;
+        border-right: 1px solid #e0e0e0;
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      .sidebar h3 {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #666;
+        margin-bottom: 15px;
+        font-weight: 600;
+      }
+
+      .collection-list {
+        list-style: none;
+      }
+
+      .collection-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        background: white;
+        border-left: 3px solid transparent;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        font-size: 14px;
+      }
+
+      .collection-item:hover {
+        background: #e8e9ff;
+        border-left-color: #667eea;
+      }
+
+      .collection-item.active {
+        background: #667eea;
+        color: white;
+        border-left-color: #764ba2;
+      }
+
+      .content-area {
+        padding: 30px;
+        overflow-y: auto;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+      }
+
+      .empty-state svg {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        opacity: 0.5;
+      }
+
+      .collection-info {
+        background: #f0f4ff;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #667eea;
+      }
+
+      .collection-info h2 {
+        font-size: 24px;
+        margin-bottom: 5px;
+        color: #333;
+      }
+
+      .collection-info p {
+        color: #666;
+        font-size: 14px;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #667eea;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+      }
+
+      button:hover {
+        background: #5568d3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .btn-danger {
+        background: #ff6b6b;
+      }
+
+      .btn-danger:hover {
+        background: #ff5252;
+      }
+
+      .btn-delete {
+        background: #ff6b6b;
+      }
+
+      .btn-delete:hover {
+        background: #ff5252;
+      }
+
+      .btn-success {
+        background: #51cf66;
+      }
+
+      .btn-success:hover {
+        background: #40c057;
+      }
+
+      .search-box {
+        padding: 10px 16px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .documents-grid {
+        display: grid;
+        gap: 15px;
+      }
+
+      .document-card {
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .document-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        transform: translateY(-2px);
+      }
+
+      .document-card h4 {
+        font-size: 16px;
+        margin-bottom: 8px;
+        color: #333;
+        word-break: break-all;
+      }
+
+      .document-preview {
+        font-size: 12px;
+        color: #666;
+        background: white;
+        padding: 8px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        max-height: 80px;
+        overflow: hidden;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+
+      .document-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .document-actions button {
+        padding: 6px 12px;
+        font-size: 12px;
+        flex: 1;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .modal-header {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 6px;
+        color: #333;
+      }
+
+      .form-group input,
+      .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: "Courier New", monospace;
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 100px;
+        font-family: "Courier New", monospace;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        justify-content: flex-end;
+      }
+
+      .modal-actions button {
+        flex: 0;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+      }
+
+      .loading::after {
+        content: "";
+        animation: dots 1.5s steps(3, end) infinite;
+      }
+
+      @keyframes dots {
+        0%,
+        20% {
+          content: ".";
+        }
+        40% {
+          content: "..";
+        }
+        60% {
+          content: "...";
+        }
+      }
+
+      .pagination {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .pagination button {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+
+      .pagination span {
+        color: #666;
+        font-size: 14px;
+      }
+
+      .alert {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        font-size: 14px;
+      }
+
+      .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+      }
+
+      .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #f5c6cb;
+      }
+
+      .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border-left: 4px solid #bee5eb;
+      }
+
+      @media (max-width: 768px) {
+        .main-content {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: none;
+          border-bottom: 1px solid #e0e0e0;
+          display: none;
+        }
+
+        .sidebar.mobile-show {
+          display: block;
+        }
+
+        header h1 {
+          font-size: 20px;
+        }
+
+        .toolbar {
+          flex-direction: column;
+        }
+
+        .search-box {
+          min-width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+      <div class="login-box">
+        <h1>🔐 Access Restricted</h1>
+        <p>Enter password to access the MongoDB CRUD Manager</p>
+        <form class="login-form" onsubmit="handleLogin(event)">
+          <input
+            type="password"
+            id="passwordInput"
+            placeholder="Enter password"
+            required
+            autofocus
+          />
+          <div class="login-error" id="loginError"></div>
+          <button type="submit" id="loginBtn">Unlock Access</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="container">
+      <header>
+        <button class="logout-btn" onclick="handleLogout()">🔓 Logout</button>
+        <h1>📊 MongoDB CRUD Manager</h1>
+        <p>Manage your database collections and documents</p>
+      </header>
+
+      <div class="main-content">
+        <div class="sidebar">
+          <h3>Collections</h3>
+          <ul class="collection-list" id="collectionList">
+            <li class="collection-item" style="color: #999">
+              Loading collections...
+            </li>
+          </ul>
+        </div>
+
+        <div class="content-area">
+          <div id="emptyState" class="empty-state">
+            <h2>Select a collection to begin</h2>
+            <p>
+              Choose a collection from the left sidebar to view and manage
+              documents
+            </p>
+          </div>
+
+          <div id="collectionContent" style="display: none">
+            <div id="alerts"></div>
+
+            <div class="collection-info">
+              <h2 id="collectionTitle"></h2>
+              <p>Documents: <span id="documentCount"></span></p>
+            </div>
+
+            <div class="toolbar">
+              <button onclick="openNewDocumentModal()" class="btn-success">
+                + New Document
+              </button>
+              <input
+                type="text"
+                class="search-box"
+                id="searchBox"
+                placeholder="Search documents..."
+              />
+            </div>
+
+            <div class="documents-grid" id="documentsContainer">
+              <div class="loading">Loading documents</div>
+            </div>
+
+            <div class="pagination" id="pagination"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View/Edit Modal -->
+    <div class="modal" id="documentModal">
+      <div class="modal-content">
+        <div class="modal-header" id="modalTitle">View Document</div>
+        <div id="modalBody"></div>
+        <div class="modal-actions">
+          <button onclick="closeModal()" style="background: #ccc; color: #333">
+            Cancel
+          </button>
+          <button onclick="saveDocument()" class="btn-success">Save</button>
+          <button onclick="deleteCurrentDocument()" class="btn-danger">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentCollection = null;
+      let currentPage = 1;
+      let currentDocument = null;
+      let currentDocumentId = null;
+
+      // Check authentication on page load
+      function checkAuthentication() {
+        const auth = sessionStorage.getItem("auth_token");
+        if (!auth) {
+          document.getElementById("loginScreen").classList.remove("hidden");
+          document.querySelector(".container").style.display = "none";
+        } else {
+          document.getElementById("loginScreen").classList.add("hidden");
+          document.querySelector(".container").style.display = "block";
+        }
+      }
+
+      // Handle login form submission
+      async function handleLogin(event) {
+        event.preventDefault();
+        const password = document.getElementById("passwordInput").value;
+        const loginBtn = document.getElementById("loginBtn");
+        const loginError = document.getElementById("loginError");
+
+        loginBtn.disabled = true;
+        loginBtn.textContent = "Verifying...";
+
+        try {
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            sessionStorage.setItem("auth_token", data.token);
+            loginError.classList.remove("show");
+            document.getElementById("loginScreen").classList.add("hidden");
+            document.querySelector(".container").style.display = "block";
+            document.getElementById("passwordInput").value = "";
+            init();
+          } else {
+            loginError.textContent = data.error || "Invalid password";
+            loginError.classList.add("show");
+            loginBtn.disabled = false;
+            loginBtn.textContent = "Unlock Access";
+            document.getElementById("passwordInput").focus();
+          }
+        } catch (error) {
+          loginError.textContent = "Error: " + error.message;
+          loginError.classList.add("show");
+          loginBtn.disabled = false;
+          loginBtn.textContent = "Unlock Access";
+        }
+      }
+
+      // Handle logout
+      function handleLogout() {
+        if (confirm("Are you sure you want to logout?")) {
+          sessionStorage.removeItem("auth_token");
+          document.getElementById("loginScreen").classList.remove("hidden");
+          document.querySelector(".container").style.display = "none";
+          document.getElementById("passwordInput").value = "";
+          document.getElementById("passwordInput").focus();
+          const loginError = document.getElementById("loginError");
+          loginError.classList.remove("show");
+        }
+      }
+
+      // Initialize
+      async function init() {
+        await loadCollections();
+      }
+
+      // Load collections from API
+      async function loadCollections() {
+        try {
+          const response = await fetch("/api/collections");
+          const collections = await response.json();
+
+          const collectionList = document.getElementById("collectionList");
+          collectionList.innerHTML = "";
+
+          if (collections.length === 0) {
+            collectionList.innerHTML =
+              '<li style="color: #999;">No collections found</li>';
+            return;
+          }
+
+          collections.forEach((collection) => {
+            const li = document.createElement("li");
+            li.className = "collection-item";
+            li.textContent = collection;
+            li.onclick = () => selectCollection(collection);
+            collectionList.appendChild(li);
+          });
+        } catch (error) {
+          showAlert("Error loading collections: " + error.message, "error");
+        }
+      }
+
+      // Select collection
+      async function selectCollection(collectionName) {
+        currentCollection = collectionName;
+        currentPage = 1;
+
+        // Update UI
+        document.querySelectorAll(".collection-item").forEach((item) => {
+          item.classList.remove("active");
+        });
+        event.target.classList.add("active");
+
+        document.getElementById("emptyState").style.display = "none";
+        document.getElementById("collectionContent").style.display = "block";
+        document.getElementById("collectionTitle").textContent = collectionName;
+
+        await loadCollectionSchema();
+        await loadDocuments();
+      }
+
+      // Load collection metadata
+      async function loadCollectionSchema() {
+        try {
+          const response = await fetch(
+            `/api/collections/${currentCollection}/schema`,
+          );
+          const data = await response.json();
+          document.getElementById("documentCount").textContent = data.count;
+        } catch (error) {
+          console.error("Error loading schema:", error);
+        }
+      }
+
+      // Load documents
+      async function loadDocuments() {
+        try {
+          const response = await fetch(
+            `/api/collections/${currentCollection}/documents?page=${currentPage}&limit=50`,
+          );
+          const data = await response.json();
+
+          const container = document.getElementById("documentsContainer");
+          container.innerHTML = "";
+
+          if (data.documents.length === 0) {
+            container.innerHTML =
+              '<p style="text-align: center; color: #999;">No documents found</p>';
+            return;
+          }
+
+          data.documents.forEach((doc) => {
+            const card = createDocumentCard(doc);
+            container.appendChild(card);
+          });
+
+          renderPagination(data);
+        } catch (error) {
+          showAlert("Error loading documents: " + error.message, "error");
+        }
+      }
+
+      // Create document card
+      function createDocumentCard(doc) {
+        const card = document.createElement("div");
+        card.className = "document-card";
+
+        const title = doc._id ? `ID: ${doc._id}` : "Document";
+        const preview = JSON.stringify(doc).substring(0, 200) + "...";
+        const docId = String(doc._id || doc.id).replace(/"/g, "&quot;");
+
+        card.innerHTML = `
+                <h4>${title}</h4>
+                <div class="document-preview">${preview}</div>
+                <div class="document-actions">
+                    <button class="btn-view" data-doc-id="${docId}">View</button>
+                    <button class="btn-edit" data-doc-id="${docId}">Edit</button>
+                    <button class="btn-delete" data-doc-id="${docId}">Delete</button>
+                </div>
+            `;
+
+        return card;
+      }
+
+      // Add event delegation for document action buttons
+      document.addEventListener("click", function (e) {
+        if (e.target.classList.contains("btn-view")) {
+          const docId = e.target.getAttribute("data-doc-id");
+          viewDocument(docId);
+        } else if (e.target.classList.contains("btn-edit")) {
+          const docId = e.target.getAttribute("data-doc-id");
+          editDocument(docId);
+        } else if (e.target.classList.contains("btn-delete")) {
+          const docId = e.target.getAttribute("data-doc-id");
+          deleteDocument(docId, e);
+        }
+      });
+
+      // Pagination
+      function renderPagination(data) {
+        const pagination = document.getElementById("pagination");
+        pagination.innerHTML = "";
+
+        if (data.pages <= 1) return;
+
+        if (currentPage > 1) {
+          const prevBtn = document.createElement("button");
+          prevBtn.textContent = "← Previous";
+          prevBtn.onclick = () => {
+            currentPage--;
+            loadDocuments();
+          };
+          pagination.appendChild(prevBtn);
+        }
+
+        const pageInfo = document.createElement("span");
+        pageInfo.textContent = `Page ${data.page} of ${data.pages}`;
+        pagination.appendChild(pageInfo);
+
+        if (currentPage < data.pages) {
+          const nextBtn = document.createElement("button");
+          nextBtn.textContent = "Next →";
+          nextBtn.onclick = () => {
+            currentPage++;
+            loadDocuments();
+          };
+          pagination.appendChild(nextBtn);
+        }
+      }
+
+      // View document
+      async function viewDocument(id) {
+        try {
+          const response = await fetch(
+            `/api/collections/${currentCollection}/documents/${id}`,
+          );
+          currentDocument = await response.json();
+          currentDocumentId = id;
+
+          document.getElementById("modalTitle").textContent = "View Document";
+          openDocumentModal();
+        } catch (error) {
+          showAlert("Error loading document: " + error.message, "error");
+        }
+      }
+
+      // Edit document
+      async function editDocument(id) {
+        await viewDocument(id);
+        document.getElementById("modalTitle").textContent = "Edit Document";
+      }
+
+      // Open new document modal
+      async function openNewDocumentModal() {
+        currentDocument = {};
+        currentDocumentId = null;
+        document.getElementById("modalTitle").textContent = "New Document";
+
+        // Fetch all documents to show field reference
+        try {
+          const response = await fetch(
+            `/api/collections/${currentCollection}/documents?page=1&limit=100`,
+          );
+          const data = await response.json();
+
+          // Collect all unique fields from existing documents
+          const allFields = new Set();
+          data.documents.forEach((doc) => {
+            Object.keys(doc).forEach((field) => {
+              if (field !== "_id" && field !== "__v") {
+                allFields.add(field);
+              }
+            });
+          });
+
+          // Pre-populate with empty fields
+          allFields.forEach((field) => {
+            currentDocument[field] = "";
+          });
+
+          // Store documents for reference display
+          window.referenceDocuments = data.documents.slice(0, 5);
+        } catch (error) {
+          console.warn("Could not fetch documents:", error);
+          window.referenceDocuments = [];
+        }
+
+        openDocumentModal();
+      }
+
+      // Open modal
+      async function openDocumentModal() {
+        const modalBody = document.getElementById("modalBody");
+        modalBody.innerHTML = "";
+
+        // Fetch schema for type hints
+        let schemaFields = {};
+        try {
+          const response = await fetch(
+            `/api/collections/${currentCollection}/schema`,
+          );
+          const schema = await response.json();
+          if (schema.sampleDocument) {
+            schemaFields = schema.sampleDocument;
+          }
+        } catch (error) {
+          console.warn("Could not fetch schema");
+        }
+
+        const fields = Object.keys(currentDocument).sort();
+
+        // Show reference section for new documents
+        if (
+          !currentDocumentId &&
+          window.referenceDocuments &&
+          window.referenceDocuments.length > 0
+        ) {
+          const referenceSection = document.createElement("div");
+          referenceSection.style.backgroundColor = "#f0f4ff";
+          referenceSection.style.border = "1px solid #d0deff";
+          referenceSection.style.borderRadius = "8px";
+          referenceSection.style.padding = "15px";
+          referenceSection.style.marginBottom = "20px";
+          referenceSection.style.maxHeight = "300px";
+          referenceSection.style.overflowY = "auto";
+
+          const refTitle = document.createElement("h4");
+          refTitle.textContent = "📋 Existing Document Examples";
+          refTitle.style.margin = "0 0 10px 0";
+          refTitle.style.color = "#667eea";
+          refTitle.style.fontSize = "14px";
+          refTitle.style.fontWeight = "bold";
+          referenceSection.appendChild(refTitle);
+
+          const refSubtitle = document.createElement("p");
+          refSubtitle.textContent =
+            "Reference from existing documents below to fill in your new document:";
+          refSubtitle.style.margin = "0 0 12px 0";
+          refSubtitle.style.fontSize = "12px";
+          refSubtitle.style.color = "#666";
+          referenceSection.appendChild(refSubtitle);
+
+          window.referenceDocuments.forEach((refDoc, docIndex) => {
+            const docPreview = document.createElement("div");
+            docPreview.style.backgroundColor = "white";
+            docPreview.style.borderRadius = "4px";
+            docPreview.style.padding = "10px";
+            docPreview.style.marginBottom = "8px";
+            docPreview.style.border = "1px solid #e0e0e0";
+            docPreview.style.fontSize = "11px";
+
+            const docIdSpan = document.createElement("div");
+            docIdSpan.style.fontWeight = "bold";
+            docIdSpan.style.color = "#333";
+            docIdSpan.style.marginBottom = "6px";
+            docIdSpan.textContent = `Document ${docIndex + 1}:`;
+            docPreview.appendChild(docIdSpan);
+
+            Object.keys(refDoc)
+              .filter((k) => k !== "_id" && k !== "__v")
+              .forEach((key) => {
+                const value = refDoc[key];
+                const displayValue =
+                  typeof value === "object"
+                    ? JSON.stringify(value).substring(0, 40) +
+                      (JSON.stringify(value).length > 40 ? "..." : "")
+                    : String(value).substring(0, 40);
+
+                const fieldLine = document.createElement("div");
+                fieldLine.style.color = "#555";
+                fieldLine.style.marginBottom = "4px";
+                fieldLine.innerHTML = `<strong>${key}:</strong> <code style="background: #f5f5f5; padding: 2px 4px; border-radius: 2px;">${displayValue}</code>`;
+                docPreview.appendChild(fieldLine);
+              });
+
+            referenceSection.appendChild(docPreview);
+          });
+
+          modalBody.appendChild(referenceSection);
+        }
+
+        if (fields.length === 0) {
+          const noFieldsMsg = document.createElement("p");
+          noFieldsMsg.style.color = "#999";
+          noFieldsMsg.textContent =
+            "No fields yet. Use the buttons below to add fields.";
+          modalBody.appendChild(noFieldsMsg);
+        }
+
+        fields.forEach((key) => {
+          if (key === "_id" || key === "__v") return;
+
+          const group = document.createElement("div");
+          group.className = "form-group";
+
+          const label = document.createElement("label");
+          const sampleType = schemaFields[key]
+            ? getFieldType(schemaFields[key])
+            : "text";
+          const isRequired = currentDocumentId ? "✎" : "✱";
+          label.textContent = `${key} ${isRequired} (${sampleType})`;
+          label.title = `Field type based on existing documents`;
+          label.setAttribute("data-field", key);
+
+          const value = currentDocument[key];
+          const isJSON = typeof value === "object" && value !== null;
+
+          const input = document.createElement(isJSON ? "textarea" : "input");
+          input.value = isJSON ? JSON.stringify(value, null, 2) : value || "";
+          input.setAttribute("data-field", key);
+          input.setAttribute("data-type", isJSON ? "json" : "text");
+          input.placeholder = `Enter ${key}...`;
+
+          group.appendChild(label);
+          group.appendChild(input);
+          modalBody.appendChild(group);
+        });
+
+        // Add field button
+        const addFieldBtn = document.createElement("button");
+        addFieldBtn.textContent = "+ Add New Field";
+        addFieldBtn.type = "button";
+        addFieldBtn.style.marginTop = "15px";
+        addFieldBtn.style.marginBottom = "20px";
+        addFieldBtn.onclick = addFieldToForm;
+        modalBody.appendChild(addFieldBtn);
+
+        document.getElementById("documentModal").classList.add("active");
+      }
+
+      // Helper to get field type from value
+      function getFieldType(value) {
+        if (value === null) return "null";
+        if (value === undefined) return "undefined";
+        if (typeof value === "object") {
+          if (Array.isArray(value)) return "array";
+          if (value.constructor.name === "ObjectId") return "ObjectId";
+          if (value.constructor.name === "Date") return "date";
+          return "object";
+        }
+        return typeof value;
+      }
+
+      // Validate field value against expected type
+      async function validateFieldTypes(formData) {
+        try {
+          const response = await fetch(
+            `/api/collections/${currentCollection}/schema`,
+          );
+          const schema = await response.json();
+          const sampleDoc = schema.sampleDocument;
+
+          if (!sampleDoc) return { valid: true, errors: [] };
+
+          const errors = [];
+
+          Object.keys(formData).forEach((field) => {
+            if (field === "_id" || field === "__v") return;
+
+            const value = formData[field];
+            const sampleValue = sampleDoc[field];
+
+            if (sampleValue === undefined) {
+              // New field, allow any type
+              return;
+            }
+
+            const expectedType = getFieldType(sampleValue);
+            const actualType = getFieldType(value);
+
+            // Type checking
+            let isValid = false;
+
+            switch (expectedType) {
+              case "string":
+                isValid = typeof value === "string";
+                break;
+              case "number":
+                isValid = typeof value === "number";
+                break;
+              case "boolean":
+                isValid = typeof value === "boolean";
+                break;
+              case "date":
+                isValid = typeof value === "string" || value instanceof Date;
+                break;
+              case "array":
+                isValid = Array.isArray(value);
+                break;
+              case "object":
+                isValid =
+                  typeof value === "object" &&
+                  value !== null &&
+                  !Array.isArray(value);
+                break;
+              case "ObjectId":
+                isValid = typeof value === "string"; // Allow string representation
+                break;
+              default:
+                isValid = true;
+            }
+
+            if (!isValid) {
+              const valuePreview =
+                typeof value === "object"
+                  ? JSON.stringify(value).substring(0, 50)
+                  : String(value).substring(0, 50);
+              errors.push(
+                `Field "${field}" expects ${expectedType} but got ${actualType}. Value: ${valuePreview}`,
+              );
+            }
+          });
+
+          return { valid: errors.length === 0, errors };
+        } catch (error) {
+          console.warn("Could not validate schema", error);
+          return { valid: true, errors: [] };
+        }
+      }
+
+      // Add field to form
+      function addFieldToForm() {
+        const modalBody = document.getElementById("modalBody");
+
+        const group = document.createElement("div");
+        group.className = "form-group";
+        group.style.border = "2px dashed #667eea";
+        group.style.padding = "15px";
+        group.style.borderRadius = "6px";
+        group.style.backgroundColor = "#f9f9ff";
+
+        const label = document.createElement("label");
+        label.textContent = "Field Name";
+        label.style.fontWeight = "bold";
+
+        const fieldNameInput = document.createElement("input");
+        fieldNameInput.placeholder = "e.g., email, age, status";
+        fieldNameInput.className = "new-field-name";
+        fieldNameInput.type = "text";
+
+        const typeLabel = document.createElement("label");
+        typeLabel.textContent = "Field Type";
+        typeLabel.style.fontWeight = "bold";
+        typeLabel.style.marginTop = "10px";
+        typeLabel.style.display = "block";
+
+        const typeSelect = document.createElement("select");
+        typeSelect.className = "new-field-type";
+        typeSelect.style.width = "100%";
+        typeSelect.style.padding = "8px";
+        typeSelect.style.border = "1px solid #ddd";
+        typeSelect.style.borderRadius = "4px";
+        typeSelect.innerHTML = `
+          <option value="text">Text (String)</option>
+          <option value="number">Number</option>
+          <option value="boolean">Boolean (true/false)</option>
+          <option value="json">JSON Object</option>
+          <option value="array">Array</option>
+          <option value="date">Date</option>
+        `;
+
+        const valueLabel = document.createElement("label");
+        valueLabel.textContent = "Field Value";
+        valueLabel.style.fontWeight = "bold";
+        valueLabel.style.marginTop = "10px";
+        valueLabel.style.display = "block";
+
+        const valueInput = document.createElement("textarea");
+        valueInput.placeholder =
+          'Enter value (use JSON format for objects/arrays, e.g., {"key": "value"})';
+        valueInput.className = "new-field-value";
+        valueInput.style.minHeight = "60px";
+
+        const removeBtn = document.createElement("button");
+        removeBtn.textContent = "✕ Remove Field";
+        removeBtn.type = "button";
+        removeBtn.style.backgroundColor = "#ff6b6b";
+        removeBtn.style.marginTop = "10px";
+        removeBtn.onclick = () => group.remove();
+
+        group.appendChild(label);
+        group.appendChild(fieldNameInput);
+        group.appendChild(typeLabel);
+        group.appendChild(typeSelect);
+        group.appendChild(valueLabel);
+        group.appendChild(valueInput);
+        group.appendChild(removeBtn);
+
+        modalBody.appendChild(group);
+      }
+
+      // Close modal
+      function closeModal() {
+        document.getElementById("documentModal").classList.remove("active");
+        currentDocument = null;
+        currentDocumentId = null;
+      }
+
+      // Save document
+      async function saveDocument() {
+        try {
+          const formData = {};
+          const validationErrors = [];
+
+          // Collect existing fields
+          document
+            .querySelectorAll("#modalBody [data-field]")
+            .forEach((input) => {
+              const field = input.getAttribute("data-field");
+              const type = input.getAttribute("data-type");
+              let value = input.value.trim();
+
+              // Validate field is not empty
+              if (value === "") {
+                validationErrors.push(`Field "${field}" cannot be empty`);
+                return;
+              }
+
+              if (type === "json") {
+                try {
+                  value = JSON.parse(value);
+                } catch (e) {
+                  validationErrors.push(
+                    `Invalid JSON in field "${field}": ${e.message}`,
+                  );
+                  return;
+                }
+              }
+
+              formData[field] = value;
+            });
+
+          // Collect new fields with type conversion
+          const newFieldNames = document.querySelectorAll(".new-field-name");
+          const newFieldTypes = document.querySelectorAll(".new-field-type");
+          const newFieldValues = document.querySelectorAll(".new-field-value");
+
+          newFieldNames.forEach((nameInput, index) => {
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            const type = newFieldTypes[index].value;
+            let rawValue = newFieldValues[index].value.trim();
+
+            if (!rawValue) {
+              validationErrors.push(`Field "${name}" value cannot be empty`);
+              return;
+            }
+
+            let value;
+
+            try {
+              switch (type) {
+                case "number":
+                  value = parseFloat(rawValue);
+                  if (isNaN(value)) {
+                    throw new Error(`"${rawValue}" is not a valid number`);
+                  }
+                  break;
+                case "boolean":
+                  value =
+                    rawValue.toLowerCase() === "true" ||
+                    rawValue === "1" ||
+                    rawValue === "yes";
+                  break;
+                case "json":
+                  try {
+                    value = JSON.parse(rawValue);
+                  } catch (e) {
+                    throw new Error(`Invalid JSON: ${e.message}`);
+                  }
+                  break;
+                case "array":
+                  try {
+                    value = JSON.parse(rawValue);
+                    if (!Array.isArray(value)) {
+                      throw new Error("Value must be a JSON array [...])");
+                    }
+                  } catch (e) {
+                    throw new Error(`Invalid array: ${e.message}`);
+                  }
+                  break;
+                case "date":
+                  const dateVal = new Date(rawValue);
+                  if (isNaN(dateVal.getTime())) {
+                    throw new Error(
+                      `Invalid date format. Use: YYYY-MM-DD or ISO 8601`,
+                    );
+                  }
+                  value = dateVal.toISOString();
+                  break;
+                default:
+                  value = rawValue; // text
+              }
+
+              formData[name] = value;
+            } catch (e) {
+              validationErrors.push(`Field "${name}": ${e.message}`);
+            }
+          });
+
+          // Show validation errors if any
+          if (validationErrors.length > 0) {
+            const errorMsg = `\n${validationErrors.join("\n")}`;
+            showAlert(`Validation errors:${errorMsg}`, "error");
+            return;
+          }
+
+          if (Object.keys(formData).length === 0) {
+            showAlert("Please enter at least one field", "error");
+            return;
+          }
+
+          // Validate against existing schema
+          const { valid, errors } = await validateFieldTypes(formData);
+          if (!valid && errors.length > 0) {
+            const errorMsg = `\n${errors.join("\n")}`;
+            showAlert(
+              `Data type mismatch detected:${errorMsg}\n\nThis may cause errors in your portfolio.`,
+              "error",
+            );
+            return;
+          }
+
+          let response;
+          if (currentDocumentId) {
+            response = await fetch(
+              `/api/collections/${currentCollection}/documents/${currentDocumentId}`,
+              {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+              },
+            );
+          } else {
+            response = await fetch(
+              `/api/collections/${currentCollection}/documents`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+              },
+            );
+          }
+
+          if (response.ok) {
+            showAlert(
+              currentDocumentId
+                ? "Document updated successfully"
+                : "Document created successfully",
+              "success",
+            );
+            closeModal();
+            await loadDocuments();
+          } else {
+            const error = await response.json();
+            showAlert("Error: " + error.error, "error");
+          }
+        } catch (error) {
+          if (error.message !== "Validation failed") {
+            showAlert("Error saving document: " + error.message, "error");
+          }
+        }
+      }
+
+      // Delete document
+      async function deleteDocument(id, event) {
+        if (event) event.stopPropagation();
+        if (!confirm("Are you sure you want to delete this document?")) return;
+
+        try {
+          const response = await fetch(
+            `/api/collections/${currentCollection}/documents/${id}`,
+            { method: "DELETE" },
+          );
+
+          if (response.ok) {
+            showAlert("Document deleted successfully", "success");
+            await loadDocuments();
+          } else {
+            const error = await response.json();
+            showAlert("Error: " + error.error, "error");
+          }
+        } catch (error) {
+          showAlert("Error deleting document: " + error.message, "error");
+        }
+      }
+
+      // Delete current document
+      async function deleteCurrentDocument() {
+        if (!confirm("Are you sure you want to delete this document?")) return;
+        await deleteDocument(currentDocumentId);
+        closeModal();
+      }
+
+      // Show alert
+      function showAlert(message, type) {
+        const alerts = document.getElementById("alerts");
+        const alert = document.createElement("div");
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        alerts.appendChild(alert);
+
+        setTimeout(() => alert.remove(), 5000);
+      }
+
+      // Initialize on load
+      window.onload = checkAuthentication;
+    </script>
+  </body>
+</html>
