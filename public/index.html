@@ -1288,18 +1288,95 @@
         currentDocumentId = null;
       }
 
+      // Convert value to specific datatype
+      function convertToDatatype(value, expectedType) {
+        if (value === "" || value === null || value === undefined) {
+          return value;
+        }
+
+        const stringValue = String(value).trim();
+
+        try {
+          switch (expectedType) {
+            case "number":
+              const num = parseFloat(stringValue);
+              if (isNaN(num)) {
+                throw new Error(`Cannot convert "${stringValue}" to number`);
+              }
+              return num;
+
+            case "boolean":
+              if (stringValue.toLowerCase() === "true" || stringValue === "1" || stringValue === "yes") {
+                return true;
+              } else if (stringValue.toLowerCase() === "false" || stringValue === "0" || stringValue === "no") {
+                return false;
+              }
+              throw new Error(`Cannot convert "${stringValue}" to boolean. Use: true, false, 1, 0, yes, or no`);
+
+            case "date":
+              const dateVal = new Date(stringValue);
+              if (isNaN(dateVal.getTime())) {
+                throw new Error(`Invalid date format: "${stringValue}". Use: YYYY-MM-DD or ISO 8601`);
+              }
+              return dateVal.toISOString();
+
+            case "object":
+            case "json":
+              if (typeof value === "object") return value;
+              try {
+                return JSON.parse(stringValue);
+              } catch (e) {
+                throw new Error(`Invalid JSON: ${e.message}`);
+              }
+
+            case "array":
+              if (Array.isArray(value)) return value;
+              try {
+                const parsed = JSON.parse(stringValue);
+                if (!Array.isArray(parsed)) {
+                  throw new Error("Value must be a JSON array");
+                }
+                return parsed;
+              } catch (e) {
+                throw new Error(`Invalid array format: ${e.message}`);
+              }
+
+            case "string":
+            case "text":
+            default:
+              return stringValue;
+          }
+        } catch (error) {
+          throw error;
+        }
+      }
+
       // Save document
       async function saveDocument() {
         try {
           const formData = {};
           const validationErrors = [];
 
-          // Collect existing fields
+          // Get schema information for type conversion
+          let schemaFields = {};
+          try {
+            const response = await fetch(
+              `/api/collections/${currentCollection}/schema`,
+            );
+            const schema = await response.json();
+            if (schema.sampleDocument) {
+              schemaFields = schema.sampleDocument;
+            }
+          } catch (error) {
+            console.warn("Could not fetch schema for type conversion");
+          }
+
+          // Collect and convert existing fields
           document
             .querySelectorAll("#modalBody [data-field]")
             .forEach((input) => {
               const field = input.getAttribute("data-field");
-              const type = input.getAttribute("data-type");
+              const dataType = input.getAttribute("data-type");
               let value = input.value.trim();
 
               // Skip _id field
@@ -1311,21 +1388,24 @@
                 return;
               }
 
-              if (type === "json") {
-                try {
-                  value = JSON.parse(value);
-                } catch (e) {
-                  validationErrors.push(
-                    `Invalid JSON in field "${field}": ${e.message}`,
-                  );
-                  return;
+              try {
+                // Determine the expected datatype from schema
+                let expectedType = "string";
+                if (schemaFields[field] !== undefined) {
+                  expectedType = getFieldType(schemaFields[field]);
+                } else if (dataType === "json") {
+                  expectedType = "json";
                 }
-              }
 
-              formData[field] = value;
+                // Convert value to the expected datatype
+                const convertedValue = convertToDatatype(value, expectedType);
+                formData[field] = convertedValue;
+              } catch (e) {
+                validationErrors.push(`Field "${field}": ${e.message}`);
+              }
             });
 
-          // Collect new fields with type conversion
+          // Collect and convert new fields
           const newFieldNames = document.querySelectorAll(".new-field-name");
           const newFieldTypes = document.querySelectorAll(".new-field-type");
           const newFieldValues = document.querySelectorAll(".new-field-value");
@@ -1335,61 +1415,17 @@
             if (!name) return;
 
             const type = newFieldTypes[index].value;
-            let rawValue = newFieldValues[index].value.trim();
+            const rawValue = newFieldValues[index].value.trim();
 
             if (!rawValue) {
               validationErrors.push(`Field "${name}" value cannot be empty`);
               return;
             }
 
-            let value;
-
             try {
-              switch (type) {
-                case "number":
-                  value = parseFloat(rawValue);
-                  if (isNaN(value)) {
-                    throw new Error(`"${rawValue}" is not a valid number`);
-                  }
-                  break;
-                case "boolean":
-                  value =
-                    rawValue.toLowerCase() === "true" ||
-                    rawValue === "1" ||
-                    rawValue === "yes";
-                  break;
-                case "json":
-                  try {
-                    value = JSON.parse(rawValue);
-                  } catch (e) {
-                    throw new Error(`Invalid JSON: ${e.message}`);
-                  }
-                  break;
-                case "array":
-                  try {
-                    value = JSON.parse(rawValue);
-                    if (!Array.isArray(value)) {
-                      throw new Error("Value must be a JSON array [...])");
-                    }
-                  } catch (e) {
-                    throw new Error(`Invalid array: ${e.message}`);
-                  }
-                  break;
-                case "date":
-                  const dateVal = new Date(rawValue);
-                  if (isNaN(dateVal.getTime())) {
-                    throw new Error(
-                      `Invalid date format. Use: YYYY-MM-DD or ISO 8601`,
-                    );
-                  }
-                  value = dateVal.toISOString();
-                  break;
-                default:
-                  value = rawValue; // text
-              }
-
-              if (name === "_id") return; // Skip _id field, handled by API URL
-              formData[name] = value;
+              // Convert value to the specified datatype
+              const convertedValue = convertToDatatype(rawValue, type);
+              formData[name] = convertedValue;
             } catch (e) {
               validationErrors.push(`Field "${name}": ${e.message}`);
             }
@@ -1398,7 +1434,7 @@
           // Show validation errors if any
           if (validationErrors.length > 0) {
             const errorMsg = `\n${validationErrors.join("\n")}`;
-            showAlert(`Validation errors:${errorMsg}`, "error");
+            showAlert(`Type conversion errors:${errorMsg}`, "error");
             return;
           }
 
@@ -1417,6 +1453,17 @@
             );
             return;
           }
+
+          // Log converted data before sending for debugging
+          console.log("📤 Data being sent to API:", {
+            collection: currentCollection,
+            method: currentDocumentId ? "PUT" : "POST",
+            convertedData: formData,
+            dataTypes: Object.entries(formData).reduce((acc, [key, val]) => {
+              acc[key] = `${typeof val}${Array.isArray(val) ? " (array)" : ""}${val instanceof Date ? " (date)" : ""}`;
+              return acc;
+            }, {}),
+          });
 
           let response;
           if (currentDocumentId) {
@@ -1440,6 +1487,8 @@
           }
 
           if (response.ok) {
+            const responseData = await response.json();
+            console.log("✅ API Response:", responseData);
             showAlert(
               currentDocumentId
                 ? "Document updated successfully"
@@ -1450,10 +1499,12 @@
             await loadDocuments();
           } else {
             const error = await response.json();
+            console.error("❌ API Error:", error);
             showAlert("Error: " + error.error, "error");
           }
         } catch (error) {
           if (error.message !== "Validation failed") {
+            console.error("❌ Exception during save:", error);
             showAlert("Error saving document: " + error.message, "error");
           }
         }
