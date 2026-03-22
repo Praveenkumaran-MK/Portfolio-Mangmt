@@ -568,9 +568,27 @@
 
       <div class="main-content">
         <div class="sidebar">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="margin: 0;">Collections</h3>
-            <button onclick="loadCollections()" style="padding: 4px 8px; font-size: 10px; background: rgba(102, 126, 234, 0.1); color: #667eea; border: 1px solid #667eea;">↻ Refresh</button>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 15px;
+            "
+          >
+            <h3 style="margin: 0">Collections</h3>
+            <button
+              onclick="loadCollections()"
+              style="
+                padding: 4px 8px;
+                font-size: 10px;
+                background: rgba(102, 126, 234, 0.1);
+                color: #667eea;
+                border: 1px solid #667eea;
+              "
+            >
+              ↻ Refresh
+            </button>
           </div>
           <ul class="collection-list" id="collectionList">
             <li class="collection-item" style="color: #999">
@@ -600,7 +618,14 @@
               <button onclick="openNewDocumentModal()" class="btn-success">
                 + New Document
               </button>
-              <button onclick="loadDocuments()" style="background: #f0f4ff; color: #667eea; border: 1px solid #d0deff;">
+              <button
+                onclick="loadDocuments()"
+                style="
+                  background: #f0f4ff;
+                  color: #667eea;
+                  border: 1px solid #d0deff;
+                "
+              >
                 ↻ Refresh Docs
               </button>
               <input
@@ -1252,9 +1277,12 @@
               const type = input.getAttribute("data-type");
               let value = input.value.trim();
 
-              // Validate field is not empty
+              // Skip _id field
+              if (field === "_id") return;
+
+              // Allow empty values for existing fields (user can clear them)
               if (value === "") {
-                validationErrors.push(`Field "${field}" cannot be empty`);
+                formData[field] = value;
                 return;
               }
 
@@ -1269,7 +1297,6 @@
                 }
               }
 
-              if (field === "_id") return; // Skip _id field
               formData[field] = value;
             });
 
