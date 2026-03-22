@@ -113,11 +113,14 @@ app.post("/api/collections/:collectionName/documents", async (req, res) => {
     const { collectionName } = req.params;
     const collection = db.collection(collectionName);
 
-    const result = await collection.insertOne(req.body);
+    const docData = { ...req.body };
+    delete docData._id; // Ensure _id isn't manually inserted if it already exists
+
+    const result = await collection.insertOne(docData);
 
     res.status(201).json({
       _id: result.insertedId,
-      ...req.body,
+      ...docData,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -137,17 +140,24 @@ app.put("/api/collections/:collectionName/documents/:id", async (req, res) => {
       query = { _id: id };
     }
 
+    const updateData = { ...req.body };
+    delete updateData._id; // IMPORTANT: Prevent "Immutable field _id" error
+
     const result = await collection.findOneAndUpdate(
       query,
-      { $set: req.body },
+      { $set: updateData },
       { returnDocument: "after" },
     );
 
-    if (!result.value) {
+    // In MongoDB Driver 6.x, findOneAndUpdate returns the document directly
+    // or an object with a 'value' property depending on options/environment.
+    const updatedDoc = result.value || result;
+
+    if (!updatedDoc) {
       return res.status(404).json({ error: "Document not found" });
     }
 
-    res.json(result.value);
+    res.json(updatedDoc);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
